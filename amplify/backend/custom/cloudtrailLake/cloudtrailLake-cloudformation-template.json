@@ -4,37 +4,55 @@
   "Parameters": {
     "env": {
       "Type": "String"
+    },
+    "CloudTrailAuditLogs": {
+      "Type": "String",
+      "Default": "yes"
     }
   },
   "Resources": {
     "MyBasicTrailBucket": {
       "Type": "AWS::S3::Bucket",
       "Properties": {
-        "BucketName": {"Fn::Sub": "team-cloudtrail-logs-${AWS::AccountId}-${env}"}
+        "BucketName": {
+          "Fn::Sub": "team-cloudtrail-${AWS::AccountId}-${env}"
+        }
       }
     },
     "MyBasicTrailBucketPolicy": {
       "Type": "AWS::S3::BucketPolicy",
       "Properties": {
-        "Bucket": {"Ref": "MyBasicTrailBucket"},
+        "Bucket": {
+          "Ref": "MyBasicTrailBucket"
+        },
         "PolicyDocument": {
           "Version": "2012-10-17",
           "Statement": [
             {
               "Sid": "AWSCloudTrailAclCheck",
               "Effect": "Allow",
-              "Principal": {"Service": "cloudtrail.amazonaws.com"},
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
               "Action": "s3:GetBucketAcl",
-              "Resource": {"Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}"}
+              "Resource": {
+                "Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}"
+              }
             },
             {
               "Sid": "AWSCloudTrailWrite",
               "Effect": "Allow",
-              "Principal": {"Service": "cloudtrail.amazonaws.com"},
+              "Principal": {
+                "Service": "cloudtrail.amazonaws.com"
+              },
               "Action": "s3:PutObject",
-              "Resource": {"Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}/AWSLogs/${AWS::AccountId}/*"},
+              "Resource": {
+                "Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}/AWSLogs/${AWS::AccountId}/*"
+              },
               "Condition": {
-                "StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}
+                "StringEquals": {
+                  "s3:x-amz-acl": "bucket-owner-full-control"
+                }
               }
             }
           ]
@@ -45,9 +63,15 @@
       "Type": "AWS::CloudTrail::Trail",
       "DependsOn": ["MyBasicTrailBucketPolicy"],
       "Properties": {
+        "TrailName": {
+          "Fn::Sub": "team-audit-trail-${env}"
+        },
+        "S3BucketName": {
+          "Ref": "MyBasicTrailBucket"
+        },
         "IsLogging": true,
-        "S3BucketName": {"Ref": "MyBasicTrailBucket"},
-        "TrailName": {"Fn::Sub": "team-basic-trail-${env}"}
+        "IncludeGlobalServiceEvents": true,
+        "IsMultiRegionTrail": false
       }
     }
   }
