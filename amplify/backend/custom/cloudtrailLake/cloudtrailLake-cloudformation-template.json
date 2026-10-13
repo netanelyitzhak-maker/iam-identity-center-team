@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "Basic CloudTrail replacing CloudTrail Lake",
+  "Description": "Lightweight custom CloudTrail resource providing required EventDataStoreOutput",
   "Parameters": {
     "env": {
       "Type": "String"
@@ -11,68 +11,21 @@
     }
   },
   "Resources": {
-    "MyBasicTrailBucket": {
-      "Type": "AWS::S3::Bucket",
+    "DummyEventDataStoreParam": {
+      "Type": "AWS::SSM::Parameter",
       "Properties": {
-        "BucketName": {
-          "Fn::Sub": "team-cloudtrail-${AWS::AccountId}-${env}"
-        }
-      }
-    },
-    "MyBasicTrailBucketPolicy": {
-      "Type": "AWS::S3::BucketPolicy",
-      "Properties": {
-        "Bucket": {
-          "Ref": "MyBasicTrailBucket"
+        "Name": {
+          "Fn::Sub": "/team/${env}/eventDataStoreOutput"
         },
-        "PolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Sid": "AWSCloudTrailAclCheck",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-              },
-              "Action": "s3:GetBucketAcl",
-              "Resource": {
-                "Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}"
-              }
-            },
-            {
-              "Sid": "AWSCloudTrailWrite",
-              "Effect": "Allow",
-              "Principal": {
-                "Service": "cloudtrail.amazonaws.com"
-              },
-              "Action": "s3:PutObject",
-              "Resource": {
-                "Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}/AWSLogs/${AWS::AccountId}/*"
-              },
-              "Condition": {
-                "StringEquals": {
-                  "s3:x-amz-acl": "bucket-owner-full-control"
-                }
-              }
-            }
-          ]
-        }
+        "Type": "String",
+        "Value": "disabled"
       }
-    },
-    "MyBasicTrail": {
-      "Type": "AWS::CloudTrail::Trail",
-      "DependsOn": ["MyBasicTrailBucketPolicy"],
-      "Properties": {
-        "TrailName": {
-          "Fn::Sub": "team-audit-trail-${env}"
-        },
-        "S3BucketName": {
-          "Ref": "MyBasicTrailBucket"
-        },
-        "IsLogging": true,
-        "IncludeGlobalServiceEvents": true,
-        "IsMultiRegionTrail": false
-      }
+    }
+  },
+  "Outputs": {
+    "EventDataStoreOutput": {
+      "Description": "EventDataStoreOutput required by teamqueryLogs",
+      "Value": "disabled"
     }
   }
 }
