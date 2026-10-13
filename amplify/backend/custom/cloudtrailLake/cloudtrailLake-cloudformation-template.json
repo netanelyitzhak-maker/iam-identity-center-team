@@ -1,102 +1,53 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Basic CloudTrail replacing CloudTrail Lake",
   "Parameters": {
     "env": {
       "Type": "String"
-    },
-    "CloudTrailAuditLogs": {
-      "Type": "String",
-      "AllowedPattern": "(read_write|read|write|none|arn.*)"
     }
   },
-  "Conditions": {
-    "IsOrganizationsSupported": {
-      "Fn::Not": [
-        {
-          "Fn::Equals": [
+  "Resources": {
+    "MyBasicTrailBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": {"Fn::Sub": "team-cloudtrail-logs-${AWS::AccountId}-${env}"}
+      }
+    },
+    "MyBasicTrailBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {"Ref": "MyBasicTrailBucket"},
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
             {
-              "Ref": "AWS::Partition"
+              "Sid": "AWSCloudTrailAclCheck",
+              "Effect": "Allow",
+              "Principal": {"Service": "cloudtrail.amazonaws.com"},
+              "Action": "s3:GetBucketAcl",
+              "Resource": {"Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}"}
             },
-            "aws-cn"
-          ]
-        }
-      ]
-    },
-    "IsReadAndWriteEnabled": {
-      "Fn::Equals": [
-        {
-          "Ref": "CloudTrailAuditLogs"
-        },
-        "read_write"
-      ]
-    },
-    "IsReadOnlyEnabled": {
-      "Fn::Equals": [
-        {
-          "Ref": "CloudTrailAuditLogs"
-        },
-        "read"
-      ]
-    },
-    "IsAuditLogsDisabled": {
-      "Fn::Equals": [
-        {
-          "Ref": "CloudTrailAuditLogs"
-        },
-        "none"
-      ]
-    },
-    "CreateEventDataStore": {
-      "Fn::Or": [
-        {
-          "Fn::Equals": [
-            "none",
             {
-              "Ref": "CloudTrailAuditLogs"
-            }
-          ]
-        },
-        {
-          "Fn::Equals": [
-            "read",
-            {
-              "Ref": "CloudTrailAuditLogs"
-            }
-          ]
-        },
-        {
-          "Fn::Equals": [
-            "read_write",
-            {
-              "Ref": "CloudTrailAuditLogs"
-            }
-          ]
-        },
-        {
-          "Fn::Equals": [
-            "write",
-            {
-              "Ref": "CloudTrailAuditLogs"
+              "Sid": "AWSCloudTrailWrite",
+              "Effect": "Allow",
+              "Principal": {"Service": "cloudtrail.amazonaws.com"},
+              "Action": "s3:PutObject",
+              "Resource": {"Fn::Sub": "arn:aws:s3:::${MyBasicTrailBucket}/AWSLogs/${AWS::AccountId}/*"},
+              "Condition": {
+                "StringEquals": {"s3:x-amz-acl": "bucket-owner-full-control"}
+              }
             }
           ]
         }
-      ]
-    }
-  },
-  "Resources": {},
-  "Outputs": {
-    "EventDataStoreOutput": {
-      "Description": "The event data store ID",
-      "Value": {
-        "Fn::If": [
-          "CreateEventDataStore",
-          {
-            "Ref": "myEventDataStore"
-          },
-          {
-            "Ref": "CloudTrailAuditLogs"
-          }
-        ]
+      }
+    },
+    "MyBasicTrail": {
+      "Type": "AWS::CloudTrail::Trail",
+      "DependsOn": ["MyBasicTrailBucketPolicy"],
+      "Properties": {
+        "IsLogging": true,
+        "S3BucketName": {"Ref": "MyBasicTrailBucket"},
+        "TrailName": {"Fn::Sub": "team-basic-trail-${env}"}
       }
     }
   }
